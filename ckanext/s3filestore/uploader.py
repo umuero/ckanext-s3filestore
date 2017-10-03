@@ -1,16 +1,13 @@
-import os
 import cgi
-import pylons
-import logging
 import datetime
-import mimetypes
+import logging
+import os
 
 import boto3
 import botocore
-
-import ckan.model as model
 import ckan.lib.munge as munge
-
+import ckan.model as model
+import pylons
 
 config = pylons.config
 log = logging.getLogger(__name__)
@@ -25,7 +22,6 @@ class S3FileStoreException(Exception):
 
 
 class BaseS3Uploader(object):
-
     def __init__(self):
         self.bucket_name = config.get('ckanext.s3filestore.aws_bucket_name')
         self.p_key = config.get('ckanext.s3filestore.aws_access_key_id')
@@ -43,11 +39,16 @@ class BaseS3Uploader(object):
         '''Return a boto bucket, creating it if it doesn't exist.'''
 
         # make s3 connection using boto3
-        session = boto3.session.Session(aws_access_key_id=self.p_key,
-                                        aws_secret_access_key=self.s_key,
-                                        region_name=self.region)
-        s3 = session.resource('s3', endpoint_url=self.host_name,
-                              config=botocore.client.Config(signature_version=self.signature))
+        session = boto3.session.Session(
+            aws_access_key_id=self.p_key,
+            aws_secret_access_key=self.s_key,
+            region_name=self.region
+        )
+        s3 = session.resource(
+            's3',
+            endpoint_url=self.host_name,
+            config=botocore.client.Config(signature_version=self.signature)
+        )
         try:
             bucket = s3.Bucket(bucket_name)
             # Test if bucket exists
@@ -56,21 +57,33 @@ class BaseS3Uploader(object):
         except botocore.exceptions.ClientError as e:
             error_code = int(e.response['Error']['Code'])
             if error_code == 404:
-                log.warning('Bucket {0} could not be found, attempting to create it...'.format(bucket_name))
+                log.warning(
+                    'Bucket {0} could not be found, attempting to create it...'.
+                    format(bucket_name)
+                )
                 try:
-                    bucket = s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={
-                        'LocationConstraint': self.region})
+                    bucket = s3.create_bucket(
+                        Bucket=bucket_name,
+                        CreateBucketConfiguration={
+                            'LocationConstraint': self.region
+                        }
+                    )
                     log.info(
-                        'Bucket {0} succesfully created'.format(bucket_name))
+                        'Bucket {0} succesfully created'.format(bucket_name)
+                    )
                 except botocore.exceptions.ClientError as e:
-                    log.warning('Could not create bucket {0}: {1}'.format(
-                        bucket_name, str(e)))
+                    log.warning(
+                        'Could not create bucket {0}: {1}'.
+                        format(bucket_name, str(e))
+                    )
             elif error_code == 403:
                 raise S3FileStoreException(
-                    'Access to bucket {0} denied'.format(bucket_name))
+                    'Access to bucket {0} denied'.format(bucket_name)
+                )
             else:
                 raise S3FileStoreException(
-                    'Something went wrong for bucket {0}'.format(bucket_name))
+                    'Something went wrong for bucket {0}'.format(bucket_name)
+                )
 
         return bucket
 
@@ -78,14 +91,20 @@ class BaseS3Uploader(object):
         '''Uploads the `upload_file` to `filepath` on `self.bucket`.'''
         upload_file.seek(0)
 
-        session = boto3.session.Session(aws_access_key_id=self.p_key,
-                                        aws_secret_access_key=self.s_key,
-                                        region_name=self.region)
-        s3 = session.resource('s3', endpoint_url=self.host_name,
-                              config=botocore.client.Config(signature_version=self.signature))
+        session = boto3.session.Session(
+            aws_access_key_id=self.p_key,
+            aws_secret_access_key=self.s_key,
+            region_name=self.region
+        )
+        s3 = session.resource(
+            's3',
+            endpoint_url=self.host_name,
+            config=botocore.client.Config(signature_version=self.signature)
+        )
         try:
             s3.Object(self.bucket_name, filepath).put(
-                Body=upload_file.read(), ACL='public-read')
+                Body=upload_file.read(), ACL='public-read'
+            )
             log.info("Succesfully uploaded {0} to S3!".format(filepath))
         except Exception as e:
             log.error('Something went very very wrong for {0}'.format(str(e)))
@@ -93,11 +112,16 @@ class BaseS3Uploader(object):
 
     def clear_key(self, filepath):
         '''Deletes the contents of the key at `filepath` on `self.bucket`.'''
-        session = boto3.session.Session(aws_access_key_id=self.p_key,
-                                    aws_secret_access_key=self.s_key,
-                                    region_name=self.region)
-        s3 = session.resource('s3', endpoint_url=self.host_name, config=botocore.client.Config(
-                             signature_version=self.signature))
+        session = boto3.session.Session(
+            aws_access_key_id=self.p_key,
+            aws_secret_access_key=self.s_key,
+            region_name=self.region
+        )
+        s3 = session.resource(
+            's3',
+            endpoint_url=self.host_name,
+            config=botocore.client.Config(signature_version=self.signature)
+        )
         try:
             s3.Object(self.bucket_name, filepath).delete()
         except Exception as e:
@@ -105,7 +129,6 @@ class BaseS3Uploader(object):
 
 
 class S3Uploader(BaseS3Uploader):
-
     '''
     An uploader class to replace local file storage with Amazon Web Services
     S3 for general files (e.g. Group cover images).
@@ -181,8 +204,9 @@ class S3Uploader(BaseS3Uploader):
         # If a filename has been provided (a file is being uploaded) write the
         # file to the appropriate key in the AWS bucket.
         if self.filename:
-            self.upload_to_key(self.filepath, self.upload_file,
-                               make_public=True)
+            self.upload_to_key(
+                self.filepath, self.upload_file, make_public=True
+            )
             self.clear = True
 
         if (self.clear and self.old_filename
@@ -191,7 +215,6 @@ class S3Uploader(BaseS3Uploader):
 
 
 class S3ResourceUploader(BaseS3Uploader):
-
     '''
     An uploader class to replace local file storage with Amazon Web Services
     S3 for resource files.
