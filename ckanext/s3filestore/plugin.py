@@ -1,10 +1,9 @@
-from routes.mapper import SubMapper
+import logging
+
 import ckan.plugins as plugins
 import ckan.plugins.toolkit as toolkit
-
 import ckanext.s3filestore.uploader
-
-import logging
+from routes.mapper import SubMapper
 
 log = logging.getLogger(__name__)
 
@@ -38,15 +37,21 @@ class S3FileStorePlugin(plugins.SingletonPlugin):
             if not config.get(option, None):
                 raise RuntimeError(missing_config.format(option))
 
-        if toolkit.asbool(config.get('ckanext.s3filestore.filesystem_download_fallback')):
+        if toolkit.asbool(
+            config.get('ckanext.s3filestore.filesystem_download_fallback')
+        ):
             log.info('Filesystem download fallback enabled.')
             if not config.get('ckan.storage_path'):
-                raise RuntimeError('For filesystem download fallback to work you need to set ckan.storage_path in your .ini file.')
+                raise RuntimeError(
+                    'For filesystem download fallback to work you need to set ckan.storage_path in your .ini file.'
+                )
 
         # Check that options actually work, if not exceptions will be raised
-        if toolkit.asbool(config.get('ckanext.s3filestore.check_access_on_startup', True)):
-            ckanext.s3filestore.uploader.BaseS3Uploader().get_s3_bucket(
-                config.get('ckanext.s3filestore.aws_bucket_name'))
+        if toolkit.asbool(
+            config.get('ckanext.s3filestore.check_access_on_startup', True)
+        ):
+            ckanext.s3filestore.uploader.BaseS3Uploader(
+            ).get_s3_bucket(config.get('ckanext.s3filestore.aws_bucket_name'))
 
     # IUploader
     def get_resource_uploader(self, data_dict):
@@ -55,28 +60,38 @@ class S3FileStorePlugin(plugins.SingletonPlugin):
 
     def get_uploader(self, upload_to, old_filename=None):
         '''Return an uploader object used to upload general files.'''
-        return ckanext.s3filestore.uploader.S3Uploader(upload_to,
-                                                       old_filename)
+        return ckanext.s3filestore.uploader.S3Uploader(upload_to, old_filename)
 
     # IRoutes
 
     def before_map(self, map):
-        with SubMapper(map, controller='ckanext.s3filestore.controller:S3Controller') as m:
+        with SubMapper(
+            map, controller='ckanext.s3filestore.controller:S3Controller'
+        ) as m:
             # Override the resource download links
-            m.connect('resource_download',
-                      '/dataset/{id}/resource/{resource_id}/download',
-                      action='resource_download')
-            m.connect('resource_download',
-                      '/dataset/{id}/resource/{resource_id}/download/{filename}',
-                      action='resource_download')
+            m.connect(
+                'resource_download',
+                '/dataset/{id}/resource/{resource_id}/download',
+                action='resource_download'
+            )
+            m.connect(
+                'resource_download',
+                '/dataset/{id}/resource/{resource_id}/download/{filename}',
+                action='resource_download'
+            )
 
             # fallback controller action to download from the filesystem
-            m.connect('filesystem_resource_download',
-                      '/dataset/{id}/resource/{resource_id}/fs_download/{filename}',
-                      action='filesystem_resource_download')
+            m.connect(
+                'filesystem_resource_download',
+                '/dataset/{id}/resource/{resource_id}/fs_download/{filename}',
+                action='filesystem_resource_download'
+            )
 
             # Intercept the uploaded file links (e.g. group images)
-            m.connect('uploaded_file', '/uploads/{upload_to}/{filename}',
-                      action='uploaded_file_redirect')
+            m.connect(
+                'uploaded_file',
+                '/uploads/{upload_to}/{filename}',
+                action='uploaded_file_redirect'
+            )
 
         return map
