@@ -4,6 +4,10 @@ import ckan.plugins.toolkit as toolkit
 
 import ckanext.s3filestore.uploader
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 class S3FileStorePlugin(plugins.SingletonPlugin):
     plugins.implements(plugins.IConfigurer)
@@ -34,15 +38,17 @@ class S3FileStorePlugin(plugins.SingletonPlugin):
             if not config.get(option, None):
                 raise RuntimeError(missing_config.format(option))
 
+        if toolkit.asbool(config.get('ckanext.s3filestore.filesystem_download_fallback')):
+            log.info('Filesystem download fallback enabled.')
+            if not config.get('ckan.storage_path'):
+                raise RuntimeError('For filesystem download fallback to work you need to set ckan.storage_path in your .ini file.')
+
         # Check that options actually work, if not exceptions will be raised
-        if toolkit.asbool(
-                config.get('ckanext.s3filestore.check_access_on_startup',
-                           True)):
+        if toolkit.asbool(config.get('ckanext.s3filestore.check_access_on_startup', True)):
             ckanext.s3filestore.uploader.BaseS3Uploader().get_s3_bucket(
                 config.get('ckanext.s3filestore.aws_bucket_name'))
 
     # IUploader
-
     def get_resource_uploader(self, data_dict):
         '''Return an uploader object used to upload resource files.'''
         return ckanext.s3filestore.uploader.S3ResourceUploader(data_dict)
