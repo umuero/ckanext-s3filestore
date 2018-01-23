@@ -10,6 +10,7 @@ import ckan.model as model
 import ckan.lib.uploader as uploader
 from ckan.common import _, request, c, response
 from botocore.exceptions import ClientError
+from .s3fileapp import S3FileApp
 
 from ckanext.s3filestore.uploader import S3Uploader
 
@@ -50,15 +51,10 @@ class S3Controller(base.BaseController):
             if filename is None:
                 filename = os.path.basename(rsc['url'])
             key_path = upload.get_path(rsc['id'], filename)
-            key = filename
-
-            if key is None:
-                log.warn('Key \'{0}\' not found in bucket \'{1}\''
-                         .format(key_path, bucket_name))
 
             try:
                 obj = bucket.Object(key_path)
-                contents = str(obj.get()['Body'].read())
+                obj.load()
             except ClientError as ex:
                 if ex.response['Error']['Code'] == 'NoSuchKey':
                     # attempt fallback
@@ -79,19 +75,12 @@ class S3Controller(base.BaseController):
                 else:
                     raise ex
 
-            dataapp = paste.fileapp.DataApp(contents)
-
-            try:
-                status, headers, app_iter = request.call_application(dataapp)
-            except OSError:
-                abort(404, _('Resource data not found'))
-
-            response.headers.update(dict(headers))
-            response.status = status
+            extra_headers = []
             content_type, x = mimetypes.guess_type(rsc.get('url', ''))
             if content_type:
-                response.headers['Content-Type'] = content_type
-            return app_iter
+                extra_headers.append(('Content-Type', content_type))
+            s3app = S3FileApp(obj, headers=extra_headers)
+            return s3app(request.environ, self.start_response)
 
         elif 'url' not in rsc:
             abort(404, _('No download is available'))
