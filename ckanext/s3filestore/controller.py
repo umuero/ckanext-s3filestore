@@ -10,6 +10,7 @@ import ckan.model as model
 import ckan.lib.uploader as uploader
 from ckan.common import _, request, c, response, streaming_response
 from botocore.exceptions import ClientError
+from .s3fileapp import S3FileApp
 
 from ckanext.s3filestore.uploader import S3Uploader
 import webob
@@ -52,11 +53,6 @@ class S3Controller(base.BaseController):
             if filename is None:
                 filename = os.path.basename(rsc['url'])
             key_path = upload.get_path(rsc['id'], filename)
-            key = filename
-
-            if key is None:
-                log.warn('Key \'{0}\' not found in bucket \'{1}\''
-                         .format(key_path, bucket_name))
 
             try:
                 # Small workaround to manage downloading of large files
