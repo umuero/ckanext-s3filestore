@@ -81,11 +81,17 @@ def resource_download(package_type, id, resource_id, filename=None):
 
             client.head_object(Bucket=bucket.name, Key=key_path)
 
+            params = {
+                'Bucket': bucket.name,
+                'Key': key_path,
+                'ResponseContentDisposition': 'attachment; filename=' + filename
+            }
+
+            if rsc.get('mimetype') == 'text/html':
+                params.pop('ResponseContentDisposition')
+
             url = client.generate_presigned_url(ClientMethod='get_object',
-                                                Params={'Bucket': bucket.name,
-                                                        'Key': key_path,
-                                                        'ResponseContentDisposition':
-                                                            'attachment; filename=' + filename},
+                                                Params=params,
                                                 ExpiresIn=60)
 
             return redirect(url)
