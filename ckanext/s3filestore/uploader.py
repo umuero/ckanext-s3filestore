@@ -69,7 +69,7 @@ class BaseS3Uploader(object):
 
     def get_s3_resource(self):
         return self.get_s3_session().resource('s3',
-                                              endpoint_url=self.host_name,
+                                              endpoint_url=self.host_name, verify=False,
                                               config=botocore.client.Config(
                                                   signature_version=self.signature,
                                                   s3={'addressing_style': self.addressing_style}
@@ -77,7 +77,7 @@ class BaseS3Uploader(object):
 
     def get_s3_client(self):
         return self.get_s3_session().client('s3',
-                                            endpoint_url=self.host_name,
+                                            endpoint_url=self.host_name, verify=False,
                                             config=Config(signature_version=self.signature,
                                                           s3={'addressing_style': self.addressing_style}),
                                             region_name=self.region)
