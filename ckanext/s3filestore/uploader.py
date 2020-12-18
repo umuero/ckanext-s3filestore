@@ -15,6 +15,16 @@ import ckantoolkit as toolkit
 import ckan.model as model
 import ckan.lib.munge as munge
 
+try:
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning, InsecurePlatformWarning, SNIMissingWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+    requests.packages.urllib3.disable_warnings(InsecurePlatformWarning)
+    requests.packages.urllib3.disable_warnings(SNIMissingWarning)
+except Exception:
+    pass
+
+
 if toolkit.check_ckan_version(min_version='2.7.0'):
     from werkzeug.datastructures import FileStorage as FlaskFileStorage
 
