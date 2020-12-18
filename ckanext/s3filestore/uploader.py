@@ -16,11 +16,8 @@ import ckan.model as model
 import ckan.lib.munge as munge
 
 try:
-    import requests
-    from requests.packages.urllib3.exceptions import InsecureRequestWarning, InsecurePlatformWarning, SNIMissingWarning
-    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-    requests.packages.urllib3.disable_warnings(InsecurePlatformWarning)
-    requests.packages.urllib3.disable_warnings(SNIMissingWarning)
+    import botocore.vendored.requests.packages.urllib3 as urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except Exception:
     pass
 
@@ -204,6 +201,8 @@ class S3Uploader(BaseS3Uploader):
         self.old_filename = old_filename
         if old_filename:
             self.old_filepath = os.path.join(self.storage_path, old_filename)
+            self.mimetype = mimetypes.guess_type(self.old_filename, strict=False)[0] or 'text/plain'
+            log.info("DEBUG_NEW filetype.mime :{0} {1}".format(self.old_filename, self.mimetype))
 
     @classmethod
     def get_storage_path(cls, upload_to):
