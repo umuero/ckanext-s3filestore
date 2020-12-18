@@ -19,7 +19,7 @@ try:
     import botocore.vendored.requests.packages.urllib3 as urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except Exception:
-    pass
+    os.environ['PYTHONWARNINGS'] = "ignore:Unverified HTTPS request"
 
 
 if toolkit.check_ckan_version(min_version='2.7.0'):
