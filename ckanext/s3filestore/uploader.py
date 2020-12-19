@@ -132,7 +132,7 @@ class BaseS3Uploader(object):
             s3.Object(self.bucket_name, filepath).put(
                 Body=upload_file.read(), ACL='public-read' if make_public else self.acl,
                 ContentType=getattr(self, 'mimetype', '') or 'text/plain')
-            log.info("Successfully uploaded {0} to S3! with: {1}".format(filepath, getattr(self, 'mimetype', '')))
+            log.info("Successfully uploaded {0} to S3! with mimetype:{1}".format(filepath, getattr(self, 'mimetype', '')))
         except Exception as e:
             log.error('Something went very very wrong for {0}'.format(str(e)))
             raise e
@@ -201,8 +201,6 @@ class S3Uploader(BaseS3Uploader):
         self.old_filename = old_filename
         if old_filename:
             self.old_filepath = os.path.join(self.storage_path, old_filename)
-            self.mimetype = mimetypes.guess_type(self.old_filename, strict=False)[0] or 'text/plain'
-            log.info("DEBUG_NEW filetype.mime :{0} {1}".format(self.old_filename, self.mimetype))
 
     @classmethod
     def get_storage_path(cls, upload_to):
@@ -232,6 +230,7 @@ class S3Uploader(BaseS3Uploader):
         if isinstance(self.upload_field_storage, ALLOWED_UPLOAD_TYPES):
             self.filename = self.upload_field_storage.filename
             self.filename = str(datetime.datetime.utcnow()) + self.filename
+            self.mimetype = mimetypes.guess_type(self.filename, strict=False)[0] or 'text/plain'
             self.filename = munge.munge_filename_legacy(self.filename)
             self.filepath = os.path.join(self.storage_path, self.filename)
             data_dict[url_field] = self.filename
@@ -324,14 +323,12 @@ class S3ResourceUploader(BaseS3Uploader):
             if not self.mimetype:
                 try:
                     self.mimetype = resource['mimetype'] = mime.from_buffer(self.upload_file.read())
-                    log.info("DEBUG magic.mime : {0}".format(self.mimetype))
 
                     # additional check on text/plain mimetypes for
                     # more reliable result, if None continue with text/plain
                     if self.mimetype == 'text/plain':
                         self.mimetype = resource['mimetype'] = \
                             mimetypes.guess_type(self.filename, strict=False)[0] or 'text/plain'
-                        log.info("DEBUG filetype.mime : {0}".format(self.mimetype))
 
                 except Exception:
                     pass
